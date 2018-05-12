@@ -5,13 +5,10 @@ from suds.plugin import MessagePlugin
 import os
 
 '''
-                # build the url to get the image snapshot
                 # parameters: 
                 # FILES_PATH: path to ndpi files directory. In windows, use '/'
                 # N_PATCHES: will split image into NxN equal-size patches
-                # scales: downsampling factor. may be one number or numpy array
-                # scale: the factor by which we want the width and height parameters to be scaled by. The resulting image will be width * scale pixels wide and height * scale pixels tall
-
+                # scales: downsampling factor. may be one number or numpy array. The resulting image will be width * scale pixels wide and height * scale pixels tall
 '''
 
 FILES_PATH = "C:/Users/Lee Twito/PycharmProjects/patho1/pathology_imgs/ndpi_imgs"

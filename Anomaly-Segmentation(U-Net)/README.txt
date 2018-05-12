@@ -1,0 +1,1 @@
+Segmentation system for anomaly recognition based on U-Net neural network.

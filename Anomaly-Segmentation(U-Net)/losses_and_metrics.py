@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[3]:
+# In[1]:
 
 
 import numpy as np
@@ -48,7 +48,7 @@ from keras.optimizers import Adam
 __READ_FROM_PICKLES__ = True
 
 
-# In[1]:
+# In[2]:
 
 
 def mean_iou(y_true, y_pred, t = 0.5):
@@ -58,6 +58,31 @@ def mean_iou(y_true, y_pred, t = 0.5):
     with tf.control_dependencies([up_opt]):
         score = tf.identity(score)
     return score
+
+
+# In[ ]:
+
+
+def mean_iou_offline(y_true_in, y_pred_in, t = 0.5):
+    yt = tf.placeholder(dtype=tf.bool, shape=y_true_in.shape)
+    yp= tf.placeholder(dtype=tf.float32, shape=y_pred_in.shape)
+    y_true = tf.to_int32(yt)
+    y_pred = tf.to_int32(yp > t)
+    score, up_opt = tf.metrics.mean_iou(yt, y_pred, num_classes=2)
+#     print(score.get_shape)
+    with tf.Session() as sess:
+        sess.run(tf.global_variables_initializer())
+        sess.run(tf.local_variables_initializer())
+#         with tf.control_dependencies([up_opt]):
+#             score = tf.identity(score)
+        feed_dict = {yt:y_true_in, yp:y_pred_in}
+        c_mat_out, score_out = sess.run([up_opt, score], feed_dict=feed_dict)
+    
+#     K.get_session().run(tf.global_variables_initializer())
+#     score = K.get_session().run(score)
+#     with tf.control_dependencies([]):
+#         score = tf.identity(score)
+    return c_mat_out[1,1] / (c_mat_out[1,1] + c_mat_out[0,1] + c_mat_out[1,0])
 
 
 # In[3]:

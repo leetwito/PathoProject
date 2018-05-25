@@ -53,9 +53,9 @@ __READ_FROM_PICKLES__ = True
 
 
 class myUnetHP(object):
-    def build(self, n_depth_layers, n_init_filters, IMG_HEIGHT=128, IMG_WIDTH=128, IMG_CHANNELS=3, verbose=1, initializer=glorot_normal):
+    def build(self, n_depth_layers, n_init_filters, IMG_HEIGHT=128, IMG_WIDTH=128, IMG_CHANNELS=3, verbose=1, initializer=glorot_normal, x_max=1., dropouts_frac=None):
         inputs = Input((IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS), name="l0_input")
-        s = Lambda(lambda x: x / 255, name="l0_normalize") (inputs)
+        s = Lambda(lambda x: x / x_max, name="l0_normalize") (inputs)
         tmp = s
 
         # encoder layers:

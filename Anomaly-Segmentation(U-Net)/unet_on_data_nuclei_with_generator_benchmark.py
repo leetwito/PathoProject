@@ -112,7 +112,7 @@ def read_data_from_pickles(X_path="my_saved_files/X_train.npy",
     return X_train, Y_train, train_ids_ser, X_test, test_ids_ser
 
 
-# In[24]:
+# In[21]:
 
 
 # we create two instances with the same arguments
@@ -138,12 +138,12 @@ data_gen_args_msk = dict(rotation_range=90.,
                      fill_mode="reflect")
 
 
-def create_generators_pair(X, Y, data_gen_args=data_gen_args, seed=0):
+def create_generators_pair(X, Y, seed=0):
     image_datagen = ImageDataGenerator(**data_gen_args_img)
     mask_datagen = ImageDataGenerator(**data_gen_args_msk)
     
-    image_datagen.fit(X, augment=True, seed=seed)
-    mask_datagen.fit(Y, augment=True, seed=seed)
+    image_datagen.fit(X, augment=True, rounds=2, seed=seed)
+    mask_datagen.fit(Y, augment=True, rounds=2, seed=seed)
 
     # image_generator = image_datagen.flow_from_directory( # in the future use this function to load data
     #     'data/images',
@@ -155,16 +155,17 @@ def create_generators_pair(X, Y, data_gen_args=data_gen_args, seed=0):
     #     class_mode=None,
     #     seed=seed)
 
-    image_generator = image_datagen.flow(X, seed=seed, batch_size=BATCH_SIZE, shuffle=True)
-    mask_generator = mask_datagen.flow(Y, seed=seed, batch_size=BATCH_SIZE, shuffle=True)
+    image_generator = image_datagen.flow(X, y=Y seed=seed, batch_size=BATCH_SIZE, shuffle=True)
+#     mask_generator = mask_datagen.flow(Y, seed=seed, batch_size=BATCH_SIZE, shuffle=True) ###
 
     # combine generators into one which yields image and masks
-    train_generator = zip(image_generator, mask_generator)
+#     train_generator = zip(image_generator, mask_generator)###
+#     return image_generator, mask_generator, train_generator###
 
-    return image_generator, mask_generator, train_generator
+    return image_generator
 
 
-# In[25]:
+# In[22]:
 
 
 # IMG_HEIGHT=960
@@ -179,7 +180,7 @@ LR_INIT = 1e-3
 LR_MIN = 1e-9
 
 
-# In[26]:
+# In[23]:
 
 
 # BATCH_SIZE = 1
@@ -187,25 +188,25 @@ LR_MIN = 1e-9
 
 # ### Read and Split Data Patho:
 
-# In[27]:
+# In[35]:
 
 
 X, Y, train_ids_ser, X_, test_ids_ser = read_data_from_pickles()
 print(X.shape, X.max(), X.min())
-print(Y.shape, Y.max(), Y.min())
+print(Y.shape, np.unique(Y))
 X.shape
 
 
 # #### Split to train/test/val
 
-# In[28]:
+# In[25]:
 
 
 X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.1, random_state=42)
 X_train, X_val, Y_train, Y_val = train_test_split(X_train, Y_train, test_size=0.1, random_state=42)
 
 
-# In[29]:
+# In[26]:
 
 
 # i = 6
@@ -221,20 +222,27 @@ X_train, X_val, Y_train, Y_val = train_test_split(X_train, Y_train, test_size=0.
 
 # ### Create Generator w/o Augmentations:
 
-# In[30]:
+# In[27]:
 
 
-image_generator_train, mask_generator_train, generator_train = create_generators_pair(X_train, Y_train)
+# image_generator_train, mask_generator_train, generator_train = create_generators_pair(X_train, Y_train) ###
+# image_generator_val, mask_generator_val, generator_val = create_generators_pair(X_val, Y_val)###
+
+
+# In[27]:
+
+
+image_generator_train = create_generators_pair(X_train, Y_train)
 image_generator_val, mask_generator_val, generator_val = create_generators_pair(X_val, Y_val)
 
 
-# In[31]:
+# In[28]:
 
 
 # image_generator_train.next()
 
 
-# In[32]:
+# In[39]:
 
 
 def compre_generators_image_mask(image_generator, mask_generator, n=10):
@@ -243,24 +251,24 @@ def compre_generators_image_mask(image_generator, mask_generator, n=10):
         x = (x-x.min())/(x-x.min()).max()
         y = mask_generator.next()[0]
         print(x.shape, x.max(), x.min())
-        print(y.shape, y.max(), y.min())
+        print(y.shape, y.max(), y.min(), len(np.unique(y))) # todo: problem - y isn't binary
         fig = plt.figure()
         plot_img_mask_maskPred(x, y)
 
 
-# In[33]:
-
+# In[40]:
+ 
 
 compre_generators_image_mask(image_generator_train, mask_generator_train)
 
 
-# In[34]:
+# In[41]:
 
 
 compre_generators_image_mask(image_generator_val, mask_generator_val)
 
 
-# In[35]:
+# In[ ]:
 
 
 # data_gen_args = dict(
@@ -283,7 +291,7 @@ compre_generators_image_mask(image_generator_val, mask_generator_val)
 # gen_test = gen_test.flow(X_test, Y_test, batch_size=BATCH_SIZE, shuffle=False)
 
 
-# In[36]:
+# In[ ]:
 
 
 # # how to use this iterator:
@@ -292,7 +300,7 @@ compre_generators_image_mask(image_generator_val, mask_generator_val)
 # print(x.shape, y.shape, x.max(), x.min(), y.max(), y.mean(), (x_val!=x).sum(), (y_val!=y).sum())
 
 
-# In[37]:
+# In[ ]:
 
 
 # x, y = .next()
@@ -305,7 +313,7 @@ compre_generators_image_mask(image_generator_val, mask_generator_val)
 
 # ### Model: Create, Compile, Fit
 
-# In[38]:
+# In[8]:
 
 
 unet = myUnetHP()
@@ -381,18 +389,23 @@ plot_img_mask_maskPred(X_train[i], Y_train[i], Y_pred[0])
 
 # #### Train
 
-# In[ ]:
+# In[9]:
 
 
 model_weights_path = "model-nuclei2018-3-dph%d_flts%d_epochs10000.h5"%(UNET_DEPTH, UNET_INIT_FILTERS)
 model.load_weights(model_weights_path)
 
 
+# In[10]:
+
+
+Y_pred = model.predict(X_train)
+
+
 # In[ ]:
 
 
 mean_ious = []  # todo: run in batches ?
-Y_pred = model.predict(X_train)
 for i in tqdm(range(len(X_train))):
     mean_ious.append(mean_iou_offline(y_true_in=np.expand_dims(Y_train[i], axis=0), y_pred_in=np.expand_dims(Y_pred[i], axis=0)))
 

@@ -5,10 +5,11 @@ __pycache__/
 
 # C extensions
 *.so
-./*.h5
+*/*.h5
 
 # Distribution / packaging
 .Python
+.idea/
 env/
 build/
 develop-eggs/
@@ -29,6 +30,7 @@ wheels/
 Anomaly-Segmentation(U-Net)/Data_patho
 Anomaly-Segmentation(U-Net)/input
 Anomaly-Segmentation(U-Net)/data
+Anomaly-Segmentation(U-Net)/my_saved_files
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

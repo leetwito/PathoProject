@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[5]:
 
 
 from imports import *
@@ -13,21 +13,22 @@ from skimage import measure, morphology
 from scipy import ndimage
 
 
-# In[2]:
+# In[1]:
 
 
 def from_binary_masks_to_colored_mask(masks):
     ### masks is a list of binary masks
     cmap=plt.cm.get_cmap('nipy_spectral')
     final = np.zeros((masks[0].shape[0], masks[0].shape[1], 3))
+    print(final.shape)
     for i in range(len(masks)):
-        final[:,:,0] += masks[i]*cmap(i/len(masks))[0]
-        final[:,:,1] += masks[i]*cmap(i/len(masks))[1]
-        final[:,:,2] += masks[i]*cmap(i/len(masks))[2]
+        final[:,:,0] += masks[i]*cmap((i+1)/(len(masks)+1))[0]
+        final[:,:,1] += masks[i]*cmap((i+1)/(len(masks)+1))[1]
+        final[:,:,2] += masks[i]*cmap((i+1)/(len(masks)+1))[2]
     return final
 
 
-# In[3]:
+# In[7]:
 
 
 def read_masks_from_dir(path):
@@ -39,7 +40,7 @@ def read_masks_from_dir(path):
     return masks
 
 
-# In[4]:
+# In[8]:
 
 
 if __name__=="__main__":
@@ -106,7 +107,7 @@ def from_mask_to_contours(mask):
     return con_image
 
 
-# In[10]:
+# In[9]:
 
 
 if __name__=="__main__":
@@ -336,7 +337,7 @@ def get_all_data_shapes(images, verbose=0):
 
 def reshape_all_images_and_save_orig_shapes(images, new_size=(256, 256)):
     orig_shapes = get_all_data_shapes(images)
-    return np.stack([cv2.resize(image, new_size) for image in images]), orig_shapes
+    return np.stack([cv2.resize(image, new_size) for image in images]),  np.array(orig_shapes)
 
 
 # In[24]:
@@ -346,16 +347,33 @@ if __name__=="__main__":
     shapes = get_all_data_shapes(images)
 
 
-# In[25]:
+# In[ ]:
 
 
-def plot_list_of_images_in_a_row(images_list, titles_list):
+def plot_image(img):
+    parms_dict = {}
+    if len(img.shape)==4 and img.shape[0]==1:
+        img = img.squeeze(axis=0)
+    if len(img.shape)==3 and img.shape[-1]==1:
+        img = img.squeeze(axis=-1)
+        parms_dict["cmap"] = plt.get_cmap("gray")
+
+    if img.max()>1:
+        img = img/255.
+    plt.imshow(img, **parms_dict)
+
+
+# In[1]:
+
+
+def plot_list_of_images_in_a_row(images_list, titles_list=None):
     n = len(images_list)
     plt.figure(figsize=(18, 5))
     for i, img in enumerate(images_list):
         plt.subplot(1,n,i+1)
-        plt.imshow(img)
-        plt.title(titles_list[i])
+        plot_image(img)
+        if titles_list is not None:
+            plt.title(titles_list[i])
 
 
 # In[26]:

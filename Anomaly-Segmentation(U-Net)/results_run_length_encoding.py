@@ -39,7 +39,7 @@ def prob_to_rles(x, cutoff=0.5):
 topDir = "C:/Users/leetw/PycharmProjects/PathoProject/Anomaly-Segmentation(U-Net)/input"
 
 test_path = os.path.join(topDir, 'stage1_test')   #path to test data file/folder
-Y_hat = cv2.imread("C:/Users/leetw/Desktop/yin-and-yang.png") # should be list of predictions matching test samples
+Y_hat = cv2.imread("C:/Users/leetw/Desktop/yin-and-yang.png") # todo: should be list of predictions matching test samples
 
 # Apply Run-Length Encoding on our Y_hat_upscaled
 new_test_ids = []

@@ -96,31 +96,3 @@ for i in range(1, num_features+1):
 #     plt.figure()
 #     plt.imshow(mask)
 
-
-# In[34]:
-
-
-#### buimld contours
-
-
-# In[29]:
-
-
-final = np.zeros((256, 256))
-for i in range(len(masks)):
-    msk = plt.imread(masks[i])
-    msk = cv2.findContours(msk, 0.5, )
-    final += msk
-
-
-# In[32]:
-
-
-_, contours, hierarchy = cv2.findContours(msk>0.5, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-
-
-# In[33]:
-
-
-msk>0.5
-

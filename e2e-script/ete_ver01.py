@@ -128,7 +128,7 @@ data_gen_args_msk = dict(rotation_range=90.,
                      zoom_range=0.2, 
                      fill_mode="reflect")
 
-# data_gen_args_img = dict( # for comapring
+# data_gen_args_img = dict( # for comapring - problematic for training because too much white
 #                      rotation_range=90.,
 #                      width_shift_range=0.2,
 #                      height_shift_range=0.2,
@@ -216,21 +216,21 @@ image_generator_val2, mask_generator_val2, generator_val2 = create_generators_pa
 
 # ### Train Models:
 
-# In[16]:
+# In[17]:
 
 
 UNET_DEPTH = 6
 UNET_INIT_FILTERS = 16
 
-LR_INIT = 1e-4
+LR_INIT = 1e-3
 LR_MIN = 1e-9
 LR_REDUCE_FACTOR = 0.5
-PATIENCE = 10
+PATIENCE = 30
 
 
 # #### Masks Model
 
-# In[17]:
+# In[18]:
 
 
 unet = myUnetHP()
@@ -251,7 +251,7 @@ checkpointer = ModelCheckpoint('saved_models/model_masks-nuclei2018-1.h5', verbo
 reduce_lr = ReduceLROnPlateau(monitor='loss', factor=LR_REDUCE_FACTOR, patience=PATIENCE, min_lr=LR_MIN, verbose=1) # search "learning rate"
 
 
-# In[18]:
+# In[19]:
 
 
 ### read init weights
@@ -277,12 +277,12 @@ results = model_masks.fit_generator(generator_train1, epochs=10000, validation_d
 # In[ ]:
 
 
-model_masks.save_weights("saved_models/model_masks-nuclei2018-85miou.h5")
+model_masks.save_weights("saved_models/model_masks-nuclei2018-miou.h5") # modify miou value in name
 
 
 # #### Contours Model
 
-# In[19]:
+# In[20]:
 
 
 unet = myUnetHP()
@@ -303,15 +303,17 @@ checkpointer = ModelCheckpoint('model_contours-nuclei2018-1.h5', verbose=1, save
 reduce_lr = ReduceLROnPlateau(monitor='loss', factor=LR_REDUCE_FACTOR, patience=PATIENCE, min_lr=LR_MIN, verbose=1) # search "learning rate"
 
 
-# In[20]:
+# In[21]:
 
 
 # model_weights_path = "model-nuclei2018-2-dph%d_flts%d.h5"%(UNET_DEPTH, UNET_INIT_FILTERS)
 # model_weights_path = "model_contours-nuclei2018-1.h5"
-model_weights_path = "saved_models/model_contours-nuclei2018-91miou.h5"
+model_weights_path = "saved_models/model_contours-nuclei2018-59miou-1600epochs.h5"
+# model_weights_path = "saved_models/model_masks-nuclei2018-85miou.h5"
 # model_weights_path = "model-nuclei2018-3-dph%d_flts%d_epochs30000.h5"%(UNET_DEPTH, UNET_INIT_FILTERS)
 if os.path.isfile(model_weights_path):
     model_contours.load_weights(model_weights_path)
+    print('weights loaded successfuly from: {}'.format(model_weights_path))
 
 
 # In[ ]:
@@ -326,32 +328,32 @@ results = model_contours.fit_generator(generator_train2, epochs=10000, validatio
 # In[ ]:
 
 
-model_contours.save_weights("saved_models/model_contours-nuclei2018-91miou.h5") # fill miou
+model_contours.save_weights("saved_models/model_contours-nuclei2018-miou-epochs.h5") # fill miou and epochs
 
 
 # ### predict
 
-# In[21]:
+# In[22]:
 
 
 range_index = range(19,22)
 
 
-# In[22]:
+# In[23]:
 
 
 mask_prediction = (model_masks.predict(images_test[range_index])>0.4).astype(int)
 contour_prediction = (model_contours.predict(images_test[range_index])>0.3).astype(int)
 
 
-# In[23]:
+# In[24]:
 
 
 #  add otsu threshold
 #  plot few thresholds
 
 
-# In[24]:
+# In[25]:
 
 
 for i in range_index:
@@ -369,7 +371,7 @@ for i in range_index:
 
 # #### binary-mask to multiple masks
 
-# In[44]:
+# In[26]:
 
 
 # Run-length encoding stolen from https://www.kaggle.com/rakhlin/fast-run-length-encoding-python
@@ -386,10 +388,10 @@ def rle_encoding(x):
 def prob_to_rles(x, cutoff=0.5): # X is colored mask
     lab_img = label(x > cutoff)
     for i in range(1, lab_img.max() + 1):
-        yield rle_encoding(lab_img == i)
+        yield rle_encoding(lab_img == i) #return generator
 
 
-# In[54]:
+# In[27]:
 
 
 example_index = 0
@@ -400,57 +402,45 @@ original_example = images_test[range_index[example_index]]
 # print(len(separated_masks), separated_masks[0].shape)
 # colored_out = Utils.from_binary_masks_to_colored_mask(separated_masks)
 
-colored_out, num_labels = scipy.ndimage.label(predict_example)
+colored_out, num_labels = scipy.ndimage.label(predict_example) #colored_masks_test ??
 Utils.plot_list_of_images_in_a_row([original_example, predict_example, colored_out])
 
 
-# In[ ]:
+# In[63]:
 
 
-
-# for i in range(len(separated_masks)//4+1):
-#     Utils.plot_list_of_images_in_a_row(separated_masks[4*i:4*i+4])
-
-
-# In[ ]:
-
-
-topDir = "C:/Users/leetw/PycharmProjects/PathoProject/Anomaly-Segmentation(U-Net)/input"
-
-test_path = os.path.join(topDir, 'stage1_test')   #path to test data file/folder
-Y_hat = cv2.imread("C:/Users/leetw/Desktop/yin-and-yang.png") # todo: should be list of predictions matching test samples
-
-
-# In[45]:
-
-
-
+output_folder = 'submissions'
+if not os.path.exists(output_folder):
+    os.makedirs(output_folder)
+test_path = os.path.join(output_folder, 'stage1_test')   #path to test data folder
+test_ids = ((next(os.walk('input/stage1_test/')))[1])
 Y_hat = colored_out
 
 # Apply Run-Length Encoding on our Y_hat_upscaled
 new_test_ids = []
 rles = []
-# for n, id_ in enumerate(os.listdir(test_path)):
-for n, id_ in enumerate(os.listdir(test_path)): # zip(paths, predicts)
+for n, id_ in enumerate(test_ids):
     rle = list(prob_to_rles(Y_hat))
     rles.extend(rle)
     new_test_ids.extend([id_] * len(rle))
 len(new_test_ids)  #note that for each test_image, we can have multiple entries of encoded pixels
 
 
-# In[ ]:
+# In[64]:
 
 
 # Create submission DataFrame
+import datetime
 sub = pd.DataFrame()
 sub['ImageId'] = new_test_ids
 sub['EncodedPixels'] = pd.Series(rles).apply(lambda x: ' '.join(str(y) for y in x))
 timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M")
-print('Submission output to: {}/working/sub-{}.csv'.format(topDir, timestamp))
-sub.to_csv(topDir+"/working/sub-{}.csv".format(timestamp), index=False)
+file_path = output_folder+'/sub-{}.csv'.format(timestamp)
+print('Submission output to: ' + file_path)
+sub.to_csv(file_path, index=False)
 
 
-# In[ ]:
+# In[58]:
 
 
 # Have a look at our submission pandas dataframe
@@ -482,13 +472,13 @@ from glob import glob
 glob("input/stage1_train/*")[155]
 
 
-# In[29]:
+# In[ ]:
 
 
 mask_prediction.shape
 
 
-# In[30]:
+# In[ ]:
 
 
 contour_prediction.shape

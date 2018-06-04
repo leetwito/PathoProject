@@ -111,7 +111,7 @@ colored_masks_val = colored_masks[idx_val]
 
 # ### Create Image Generators
 
-# In[8]:
+# In[13]:
 
 
 data_gen_args_img = dict(samplewise_center=True,
@@ -157,7 +157,7 @@ def create_generators_pair(X, Y, seed=0):
 
 
 
-# In[9]:
+# In[14]:
 
 
 # compare generators
@@ -174,20 +174,20 @@ def compre_generators_image_mask(image_generator, mask_generator, n=10):
 
 # #### generator for masks-model
 
-# In[10]:
+# In[19]:
 
 
 image_generator_train1, mask_generator_train1, generator_train1 = create_generators_pair(images_train, binary_masks_train)
 image_generator_val1, mask_generator_val1, generator_val1 = create_generators_pair(images_val, binary_masks_val)
 
 
-# In[11]:
+# In[20]:
 
 
-# compre_generators_image_mask(image_generator_train1, mask_generator_train1, n=10)
+compre_generators_image_mask(image_generator_train1, mask_generator_train1, n=10)
 
 
-# In[12]:
+# In[ ]:
 
 
 # compre_generators_image_mask(image_generator_val1, mask_generator_val1, n=10)
@@ -216,32 +216,32 @@ image_generator_val2, mask_generator_val2, generator_val2 = create_generators_pa
 
 # ### Train Models:
 
-# In[17]:
+# In[16]:
 
 
 UNET_DEPTH = 6
 UNET_INIT_FILTERS = 16
 
-LR_INIT = 1e-3
+LR_INIT = 1e-2
 LR_MIN = 1e-9
-LR_REDUCE_FACTOR = 0.5
+LR_REDUCE_FACTOR = 0.33
 PATIENCE = 30
 
 
 # #### Masks Model
 
-# In[18]:
+# In[17]:
 
 
 unet = myUnetHP()
 model_masks = unet.build(n_depth_layers=UNET_DEPTH, n_init_filters=UNET_INIT_FILTERS, x_max=1.)
 
 
-# In[ ]:
+# In[23]:
 
 
 # Compile model:
-model_masks.compile(optimizer=Adam(lr = LR_INIT), loss='binary_crossentropy', metrics=[mean_iou])
+model_masks.compile(optimizer=keras.optimizers.Adagrad(lr = LR_INIT), loss='binary_crossentropy', metrics=[mean_iou])
 
 
 # In[ ]:
@@ -251,7 +251,7 @@ checkpointer = ModelCheckpoint('saved_models/model_masks-nuclei2018-1.h5', verbo
 reduce_lr = ReduceLROnPlateau(monitor='loss', factor=LR_REDUCE_FACTOR, patience=PATIENCE, min_lr=LR_MIN, verbose=1) # search "learning rate"
 
 
-# In[19]:
+# In[18]:
 
 
 ### read init weights
@@ -282,28 +282,28 @@ model_masks.save_weights("saved_models/model_masks-nuclei2018-miou.h5") # modify
 
 # #### Contours Model
 
-# In[20]:
+# In[17]:
 
 
 unet = myUnetHP()
 model_contours = unet.build(n_depth_layers=UNET_DEPTH, n_init_filters=UNET_INIT_FILTERS, x_max=1.)
 
 
-# In[ ]:
+# In[18]:
 
 
 # Compile model:
-model_contours.compile(optimizer=Adam(lr = LR_INIT), loss='binary_crossentropy', metrics=[mean_iou])
+model_contours.compile(optimizer=keras.optimizers.Adagrad(lr = LR_INIT), loss='binary_crossentropy', metrics=[mean_iou])
 
 
-# In[ ]:
+# In[19]:
 
 
 checkpointer = ModelCheckpoint('model_contours-nuclei2018-1.h5', verbose=1, save_best_only=True)
 reduce_lr = ReduceLROnPlateau(monitor='loss', factor=LR_REDUCE_FACTOR, patience=PATIENCE, min_lr=LR_MIN, verbose=1) # search "learning rate"
 
 
-# In[21]:
+# In[ ]:
 
 
 # model_weights_path = "model-nuclei2018-2-dph%d_flts%d.h5"%(UNET_DEPTH, UNET_INIT_FILTERS)
@@ -316,7 +316,7 @@ if os.path.isfile(model_weights_path):
     print('weights loaded successfuly from: {}'.format(model_weights_path))
 
 
-# In[ ]:
+# In[21]:
 
 
 results = model_contours.fit_generator(generator_train2, epochs=10000, validation_data=generator_val2, callbacks=[checkpointer, reduce_lr],
@@ -333,36 +333,6 @@ model_contours.save_weights("saved_models/model_contours-nuclei2018-miou-epochs.
 
 # ### predict
 
-# In[22]:
-
-
-range_index = range(19,22)
-
-
-# In[23]:
-
-
-mask_prediction = (model_masks.predict(images_test[range_index])>0.4).astype(int)
-contour_prediction = (model_contours.predict(images_test[range_index])>0.3).astype(int)
-
-
-# In[24]:
-
-
-#  add otsu threshold
-#  plot few thresholds
-
-
-# In[25]:
-
-
-for i in range_index:
-#     plt.figure
-    diff = np.maximum(np.zeros(mask_prediction[i-range_index[0]].shape), (mask_prediction[i-range_index[0]] - contour_prediction[i-range_index[0]]))
-    Utils.plot_list_of_images_in_a_row([images_test[i], mask_prediction[i-range_index[0]], contour_prediction[i-range_index[0]], diff, colored_masks_test[i]])
-#     Utils.plot_list_of_images_in_a_row([images_test[i], mask_prediction[i-range_index[0]], contour_prediction[i-range_index[0]], colored_masks_test[i]])
-
-
 # ### Post-Processing (Masks+Contours)
 
 # ### Evaluate Performance
@@ -371,7 +341,22 @@ for i in range_index:
 
 # #### binary-mask to multiple masks
 
-# In[26]:
+# In[ ]:
+
+
+range_index = range(19,22)
+mask_prediction = (model_masks.predict(images_test[range_index])>0.4).astype(int)
+contour_prediction = (model_contours.predict(images_test[range_index])>0.3).astype(int)
+#  add otsu threshold
+#  plot few thresholds
+
+for i in range_index:
+#     plt.figure
+    diff = np.maximum(np.zeros(mask_prediction[i-range_index[0]].shape), (mask_prediction[i-range_index[0]] - contour_prediction[i-range_index[0]]))
+    Utils.plot_list_of_images_in_a_row([images_test[i], mask_prediction[i-range_index[0]], contour_prediction[i-range_index[0]], diff, colored_masks_test[i]])
+
+
+# In[22]:
 
 
 # Run-length encoding stolen from https://www.kaggle.com/rakhlin/fast-run-length-encoding-python
@@ -391,42 +376,44 @@ def prob_to_rles(x, cutoff=0.5): # X is colored mask
         yield rle_encoding(lab_img == i) #return generator
 
 
-# In[27]:
+# In[23]:
 
 
-example_index = 0
-predict_example = mask_prediction[example_index]
-original_example = images_test[range_index[example_index]]
-
-# separated_masks = Utils.from_binary_mask_to_masks(predict_example)
-# print(len(separated_masks), separated_masks[0].shape)
-# colored_out = Utils.from_binary_masks_to_colored_mask(separated_masks)
-
-colored_out, num_labels = scipy.ndimage.label(predict_example) #colored_masks_test ??
+colored_out, num_labels = scipy.ndimage.label(predict_example) #todo: bug: problem with resize
 Utils.plot_list_of_images_in_a_row([original_example, predict_example, colored_out])
 
 
-# In[63]:
+# In[ ]:
 
 
 output_folder = 'submissions'
 if not os.path.exists(output_folder):
     os.makedirs(output_folder)
-test_path = os.path.join(output_folder, 'stage1_test')   #path to test data folder
-test_ids = ((next(os.walk('input/stage1_test/')))[1])
-Y_hat = colored_out
+test_ids = ((next(os.walk('input/stage2_test_final/')))[1])
+Y_hat = reshape_images_to_orig_shapes(colored_out, shapes_orig)
+
+
+# In[ ]:
+
+
+print(colored_out[50].shape, Y_hat[50].shape, orig_sizes[50])
+
+
+# In[ ]:
+
 
 # Apply Run-Length Encoding on our Y_hat_upscaled
 new_test_ids = []
 rles = []
-for n, id_ in enumerate(test_ids):
+for n, id_ in tqdm(enumerate(test_ids)):
     rle = list(prob_to_rles(Y_hat))
     rles.extend(rle)
     new_test_ids.extend([id_] * len(rle))
+# print(n)
 len(new_test_ids)  #note that for each test_image, we can have multiple entries of encoded pixels
 
 
-# In[64]:
+# In[ ]:
 
 
 # Create submission DataFrame
@@ -440,46 +427,9 @@ print('Submission output to: ' + file_path)
 sub.to_csv(file_path, index=False)
 
 
-# In[58]:
+# In[ ]:
 
 
 # Have a look at our submission pandas dataframe
 sub.head()
-
-
-# In[ ]:
-
-
-# for-loop over: Utils.from_binary_mask_to_masks(mask)
-
-
-# In[ ]:
-
-
-a[0].shape
-
-
-# In[ ]:
-
-
-idx_test[19]
-
-
-# In[ ]:
-
-
-from glob import glob
-glob("input/stage1_train/*")[155]
-
-
-# In[ ]:
-
-
-mask_prediction.shape
-
-
-# In[ ]:
-
-
-contour_prediction.shape
 

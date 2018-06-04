@@ -340,6 +340,14 @@ def reshape_all_images_and_save_orig_shapes(images, new_size=(256, 256)):
     return np.stack([cv2.resize(image, new_size) for image in images]),  np.array(orig_shapes)
 
 
+# In[ ]:
+
+
+def reshape_images_to_orig_shapes(images, orig_sizes):
+    imgs = [cv2.resize(image, image_org_size) for image, image_org_size in zip(images, orig_sizes)]
+    return imgs
+
+
 # In[24]:
 
 
